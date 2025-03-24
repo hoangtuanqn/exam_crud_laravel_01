@@ -10,21 +10,19 @@ class CustomerController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public $customers, $messages;
+    public $messages;
     public function __construct()
     {
-        // $this->customers = new Customer();
         $this->messages = [
             'CCode.unique' => 'CCode này đã tồn tại',
             'required' => 'Trường này không được để trống',
             'max' => 'Trường này không được quá :max ký tự',
             'min' => 'Trường này không được ít hơn :min ký tự'
         ];
-        $this->customers = new Customer();
     }
     public function index()
     {
-        $customerList = $this->customers->getAll();
+        $customerList = Customer::all();
         return view('home', compact('customerList'));
     }
 
@@ -55,11 +53,11 @@ class CustomerController extends Controller
             $this->messages
         );
 
-        $isCheck = $this->customers->insertCustomer([
-            $request->CCode,
-            $request->CName,
-            $request->CPhone,
-            $request->CEmail
+        $isCheck = Customer::create([
+            'CCode' => $request->CCode,
+            'CName' => $request->CName,
+            'CPhone' => $request->CPhone,
+            'CEmail' => $request->CEmail
         ]);
         if($isCheck) {
             return redirect()->route('index')->with('success', 'Đã thêm dữ liệu thành công');
@@ -82,11 +80,10 @@ class CustomerController extends Controller
     public function edit(Request $request, string $CCode)
     {
         $request->session()->put('CCode', $CCode);
-        $detailCustomer = $this->customers->getDetail($CCode);
+        $detailCustomer = Customer::find($CCode);
         if(empty($CCode) || empty($detailCustomer)) {
             return redirect()->route('index')->with('error', 'Không tìm thấy dữ liệu');
         }
-        $detailCustomer = $detailCustomer[0];
         return view('edit', compact('detailCustomer'));
     }
 
@@ -96,7 +93,10 @@ class CustomerController extends Controller
     public function update(Request $request)
     {
         $CCode = $request->session()->get('CCode');
-        $CCode = $this->customers->getDetail($CCode)[0]->CCode;
+        $CCode = Customer::find($CCode)->CCode;
+        if(empty($CCode)) {
+            return redirect()->route('index')->with('error', 'Dữ liệu không tồn tại!');
+        }
         $request->validate(
             [
                 'CCode' => 'required|min:1|max:50|unique:customer,CCode,'.$CCode.',CCode',
@@ -111,12 +111,11 @@ class CustomerController extends Controller
             $this->messages
         );
 
-        $isCheck = $this->customers->updateCustomer([
-            $request->CCode,
-            $request->CName,
-            $request->CPhone,
-            $request->CEmail,
-            $request->session()->get('CCode')
+        $isCheck = Customer::where('CCode', $CCode)->update([
+            'CCode' => $request->CCode,
+            'CName' => $request->CName,
+            'CPhone' => $request->CPhone,
+            'CEmail' => $request->CEmail,
         ]);
         if($isCheck) {
             return redirect()->route('index')->with('success', 'Đã cập nhật dữ liệu thành công');
@@ -130,7 +129,7 @@ class CustomerController extends Controller
      */
     public function destroy(string $CCode)
     {
-        $isCheck = $this->customers->deleteCustomer($CCode);
+        $isCheck = Customer::destroy($CCode);
         if($isCheck) {
             return redirect()->route('index')->with('success', 'Đã xóa dữ liệu thành công');
         } else {
